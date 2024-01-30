@@ -244,7 +244,7 @@ if __name__ == '__main__':
     ip4 = '192.168.42.1'
     port = 9001
     rtk_rover = reach_rover(ip4,port,shared_lock)
-    rtk_rover = None
+
     ## Infrared radiometers configuration for temperature measurements
     ## Labjack U6 PRO + Apogee 1H1-series IRR
     # AIN13 thernistor unit 1142
