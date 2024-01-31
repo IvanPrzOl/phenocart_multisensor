@@ -43,8 +43,8 @@ class MainApp(tk.Frame):
         self.spec_stop_event = Event()
         self.wd = Path()
         self.root.title('Phenocart Multisensor')
-        ttk.Button(self,text='Select folder',command=self.select_directory).grid(row=0,column=0)
-        self.calibrate_bttn = tk.Button(self,text='Calibrate',command=self.calibrate_hdx_modules)
+        ttk.Button(self,text='Seleccionar carpeta',command=self.select_directory).grid(row=0,column=0)
+        self.calibrate_bttn = tk.Button(self,text='Calibrar spec',command=self.calibrate_hdx_modules)
         self.calibrate_bttn.grid(row=4,column=0)
         self.start_temp_bttn = ttk.Button(self,text='Start temp',command=self.call_log_temperatures)
         self.start_temp_bttn.grid(row=4,column=1)
@@ -56,14 +56,14 @@ class MainApp(tk.Frame):
         self.start_spec_bttn['state'] = 'disabled'
         self.gps_frame_container = ttk.LabelFrame(self,text='GPS')#,sticky=(tk.E,tk.W)) #type: ignore
         self.gps_frame_container.grid(row=3,column=1,sticky=(tk.W,tk.E) ) #type: ignore
-        ttk.Label(self,text='COM port').grid(row=2,column=0)
+        ttk.Label(self,text='Puerto COM').grid(row=2,column=0)
         self.com_port_str = tk.StringVar()
         self.COM_port_combo = ttk.Combobox(self,textvariable=self.com_port_str,values=[x.name for x in comports()],state='readonly')
         self.COM_port_combo.bind('<<ComboboxSelected>>',self.select_comport_callback)
         self.COM_port_combo.grid(row=2,column=1,sticky=tk.W)
-        self.connect_gps_bttn = ttk.Button(self.gps_frame_container,text='Connect',command=self.gps_connect_callback)
+        self.connect_gps_bttn = ttk.Button(self.gps_frame_container,text='Conectar GPS',command=self.gps_connect_callback)
         self.connect_gps_bttn.grid(row=0,column=0)
-        ttk.Label(self.gps_frame_container,text='Status:').grid(row=0,column=1)
+        ttk.Label(self.gps_frame_container,text='Fix Quality Status:').grid(row=0,column=1)
         self.status_color_label = ttk.Label(self.gps_frame_container,text='          ',background=colors(6).name)
         self.status_color_label.grid(row=0,column=2)
         self.gps_connected = False
@@ -71,7 +71,7 @@ class MainApp(tk.Frame):
         self.name_suffix = tk.StringVar()
         self.wd_label = ttk.Label(self,textvariable=self.current_folder_text).grid(row=0,column=1)
         self.current_folder_text.set(str(self.wd.resolve()))
-        ttk.Label(self,text = 'Name suffix').grid(row=1,column=0)
+        ttk.Label(self,text = 'Nombre de ensayo').grid(row=1,column=0)
         ttk.Entry(self,textvariable = self.name_suffix).grid(row=1,column=1,sticky=(tk.W,tk.E)) #type: ignore
         self.temp_logging = False
         self.sdi12_logging = False
@@ -103,19 +103,19 @@ class MainApp(tk.Frame):
                 tf = self.gps.spin()
                 f = Thread(target=self.seek_gps_status,daemon=True,args=(tf,) )
                 f.start()
-                self.connect_gps_bttn.config(text='Disconnect')
+                self.connect_gps_bttn.config(text='Desconectar GPS')
                 self.gps_connected = True
             except Exception as e:
                 self.gps.stop()
                 self.gps_connected = False
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 self.status_color_label.config(background=colors(0).name)
         else:
             if self.gps is None:
                 print("No gps to connect")
             else:
                 self.gps.stop()
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 self.status_color_label.config(background='grey')
                 self.gps_connected = False
     
@@ -131,7 +131,7 @@ class MainApp(tk.Frame):
                     self.status_color_label.config( background=colors(color).name )
             else:
                 self.status_color_label.config( background=colors(6).name )
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 break
             sleep(1)
 
