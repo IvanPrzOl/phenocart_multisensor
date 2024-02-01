@@ -143,7 +143,12 @@ class MainApp(tk.Frame):
                 self.irr_stop_event.clear()
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'temp','.txt')
-                log_temperatures(filepath,self.irr_units,self.irr_stop_event,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                log_temperatures(filepath,self.irr_units,self.irr_stop_event,gps)
                 self.temp_logging = True
                 self.start_temp_bttn.config(text="Stop temp")
                 print("Logging temperature")
@@ -168,8 +173,13 @@ class MainApp(tk.Frame):
                 serial_port.port = self.com_port_str.get()
                 serial_port.timeout = 5
                 serial_port.open()
-                ndvi_list = make_ndvi_pairs(self.ndvi_units[0],self.ndvi_units[1:],serial_port,self.gps)
-                pri_list = make_pri_pairs(self.pri_units[0],self.pri_units[1:],serial_port,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                ndvi_list = make_ndvi_pairs(self.ndvi_units[0],self.ndvi_units[1:],serial_port,gps)
+                pri_list = make_pri_pairs(self.pri_units[0],self.pri_units[1:],serial_port,gps)
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'SDI12','.txt')
                 log_ndvi_pri(filepath,ndvi_list,pri_list,self.sdi12_stop_event)
@@ -224,7 +234,12 @@ class MainApp(tk.Frame):
                 self.spec_stop_event.clear()
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'spec','.h5')
-                save_raw_spectra(filepath,self.spec_stop_event,self.hdx_modules,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                save_raw_spectra(filepath,self.spec_stop_event,self.hdx_modules,gps)
                 self.spec_logging = True
                 self.start_spec_bttn.config(text="Stop spec")
                 self.calibrate_bttn['state'] = 'disabled'
