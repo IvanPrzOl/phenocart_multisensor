@@ -44,7 +44,7 @@ class MainApp(tk.Frame):
         self.wd = Path()
         self.root.title('Phenocart Multisensor')
         ttk.Button(self,text='Seleccionar carpeta',command=self.select_directory).grid(row=0,column=0)
-        self.calibrate_bttn = tk.Button(self,text='Calibrar spec',command=self.calibrate_hdx_modules)
+        self.calibrate_bttn = ttk.Button(self,text='Calibrar spec',command=self.calibrate_hdx_modules)
         self.calibrate_bttn.grid(row=4,column=0)
         self.start_temp_bttn = ttk.Button(self,text='Start temp',command=self.call_log_temperatures)
         self.start_temp_bttn.grid(row=4,column=1)
@@ -199,7 +199,7 @@ class MainApp(tk.Frame):
                                                                     spec,
                                                                     position=device_info['position'])
                                                 for spec,device_info in zip(HDX_downlooking,self.hdx_downlooking)]
-                self.calibrate_bttn.config(bg='green')
+                # self.calibrate_bttn.config(bg='green')
                 self.spec_modules_created = True
             else:
                 pass
@@ -225,15 +225,18 @@ class MainApp(tk.Frame):
                 save_raw_spectra(filepath,self.spec_stop_event,self.hdx_modules,self.gps)
                 self.spec_logging = True
                 self.start_spec_bttn.config(text="Stop spec")
+                self.calibrate_bttn['state'] = 'disabled'
             except:
                 self.spec_stop_event.set()
                 self.spec_logging = False
                 self.start_spec_bttn.config(text="Start spec")
-                self.calibrate_bttn.config(bg='light grey')
+                self.calibrate_bttn['state'] = 'normal'
+                # self.calibrate_bttn.config(bg='light grey')
         else:
             self.spec_stop_event.set()
             self.spec_logging = False
             self.start_spec_bttn.config(text="Start spec")
+            self.calibrate_bttn['state'] = 'normal'
             # self.calibrate_bttn.config(bg='light grey')
 
 if __name__ == '__main__':
