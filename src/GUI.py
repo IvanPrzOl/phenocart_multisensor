@@ -6,6 +6,7 @@ from tkinter import filedialog
 from seabreeze.spectrometers import Spectrometer
 from pathlib import Path
 from threading import Event,Lock,Thread
+import threading
 from rtk_gps import reach_rover
 from enum import Enum
 from time import sleep
@@ -78,6 +79,7 @@ class MainApp(tk.Frame):
         self.spec_logging= False
         self.spec_modules_created = False
         self.spec_calibrated = False
+        self.bind('<Destroy>',self.safe_exit) 
 
         for child in self.winfo_children():
             child.grid_configure(padx=5,pady=5)
@@ -238,6 +240,18 @@ class MainApp(tk.Frame):
             self.start_spec_bttn.config(text="Start spec")
             self.calibrate_bttn['state'] = 'normal'
             # self.calibrate_bttn.config(bg='light grey')
+    
+    def safe_exit(self,event):
+        self.irr_stop_event.set()
+        self.sdi12_stop_event.set()
+        self.spec_stop_event.set()
+
+        for thread in threading.enumerate():
+            if thread != threading.current_thread():
+                thread.join(1)
+        print("Done")
+
+                
 
 if __name__ == '__main__':
     shared_lock = Lock()
@@ -294,5 +308,3 @@ if __name__ == '__main__':
     finally:
         if not(rtk_rover is None):
             rtk_rover.stop()
-        #to do: write a mechanism to kill all threads and save files
-        print('Done')
