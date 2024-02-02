@@ -293,9 +293,9 @@ if __name__ == '__main__':
     ## SDI-12 protocol
     ndvi_units = [
     {'id':'1','position':SensorPosition.CENTER,'orientation':SensorOrientation.UPLOOKING},
-    {'id':'2','position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING},
+    {'id':'4','position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING},
     {'id':'3','position':SensorPosition.CENTER,'orientation':SensorOrientation.DOWNLOOKING},
-    {'id':'4','position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING}
+    {'id':'2','position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING}
     ]
 
     pri_units = [
@@ -308,9 +308,9 @@ if __name__ == '__main__':
     ## HDX-XR spectrometers configuration
     ## pySeabreeze Open source USB driver
     downlooking_devices = [
-        {'position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01033'},
+        {'position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01032'},
         {'position':SensorPosition.CENTER,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01034'},
-        {'position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01032'}
+        {'position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01033'}
     ]
     uplooking_device = {'position':SensorPosition.CENTER,'orientation':SensorOrientation.UPLOOKING,'serial_number':'HDX01010'}
     try:
