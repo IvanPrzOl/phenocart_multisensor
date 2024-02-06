@@ -10,8 +10,6 @@ class reach_rover():
         self.port = port
         self.lock = lock 
         self.loop_event_ctrl = Event()
-        self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.sock.settimeout(5)
         self.current_coordinates = {'coordinates':(None,None,None), #lat,long,alt
                                     'metadata':(None,None)} #timestamp, quality_fix
         self._coordinates = None
@@ -38,11 +36,11 @@ class reach_rover():
         bytes_buffer = BytesIO()
         self.loop_event_ctrl.clear()
         try:
-            with self.sock:
-                    self.sock.connect((self.ip,self.port))
-                    # self.loop_event_ctrl.set()
+            with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as sock:
+                    sock.connect((self.ip,self.port))
+                    sock.settimeout(5)
                     while not self.loop_event_ctrl.is_set():
-                        c = self.sock.recv(1)
+                        c = sock.recv(1)
                         if (c == b'\n' or c == b'\r'):
                             self.parse_stream(bytes_buffer.getvalue().strip().decode('ascii'))
                             bytes_buffer.close()
@@ -56,7 +54,6 @@ class reach_rover():
             print('Timeout')
             self.stop()
         print('Closing socket')
-        self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     @property  
     def coordinates(self): #{'coordinates':(lat,long,alt),'metadata':(iso timestamp,quality fix)}
         with self.lock:

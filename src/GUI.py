@@ -6,6 +6,7 @@ from tkinter import filedialog
 from seabreeze.spectrometers import Spectrometer
 from pathlib import Path
 from threading import Event,Lock,Thread
+import threading
 from rtk_gps import reach_rover
 from enum import Enum
 from time import sleep
@@ -43,8 +44,8 @@ class MainApp(tk.Frame):
         self.spec_stop_event = Event()
         self.wd = Path()
         self.root.title('Phenocart Multisensor')
-        ttk.Button(self,text='Select folder',command=self.select_directory).grid(row=0,column=0)
-        self.calibrate_bttn = tk.Button(self,text='Calibrate',command=self.calibrate_hdx_modules)
+        ttk.Button(self,text='Seleccionar carpeta',command=self.select_directory).grid(row=0,column=0)
+        self.calibrate_bttn = ttk.Button(self,text='Calibrar spec',command=self.calibrate_hdx_modules)
         self.calibrate_bttn.grid(row=4,column=0)
         self.start_temp_bttn = ttk.Button(self,text='Start temp',command=self.call_log_temperatures)
         self.start_temp_bttn.grid(row=4,column=1)
@@ -56,14 +57,14 @@ class MainApp(tk.Frame):
         self.start_spec_bttn['state'] = 'disabled'
         self.gps_frame_container = ttk.LabelFrame(self,text='GPS')#,sticky=(tk.E,tk.W)) #type: ignore
         self.gps_frame_container.grid(row=3,column=1,sticky=(tk.W,tk.E) ) #type: ignore
-        ttk.Label(self,text='COM port').grid(row=2,column=0)
+        ttk.Label(self,text='Puerto COM').grid(row=2,column=0)
         self.com_port_str = tk.StringVar()
         self.COM_port_combo = ttk.Combobox(self,textvariable=self.com_port_str,values=[x.name for x in comports()],state='readonly')
         self.COM_port_combo.bind('<<ComboboxSelected>>',self.select_comport_callback)
         self.COM_port_combo.grid(row=2,column=1,sticky=tk.W)
-        self.connect_gps_bttn = ttk.Button(self.gps_frame_container,text='Connect',command=self.gps_connect_callback)
+        self.connect_gps_bttn = ttk.Button(self.gps_frame_container,text='Conectar GPS',command=self.gps_connect_callback)
         self.connect_gps_bttn.grid(row=0,column=0)
-        ttk.Label(self.gps_frame_container,text='Status:').grid(row=0,column=1)
+        ttk.Label(self.gps_frame_container,text='Fix Quality Status:').grid(row=0,column=1)
         self.status_color_label = ttk.Label(self.gps_frame_container,text='          ',background=colors(6).name)
         self.status_color_label.grid(row=0,column=2)
         self.gps_connected = False
@@ -71,13 +72,14 @@ class MainApp(tk.Frame):
         self.name_suffix = tk.StringVar()
         self.wd_label = ttk.Label(self,textvariable=self.current_folder_text).grid(row=0,column=1)
         self.current_folder_text.set(str(self.wd.resolve()))
-        ttk.Label(self,text = 'Name suffix').grid(row=1,column=0)
+        ttk.Label(self,text = 'Nombre de ensayo').grid(row=1,column=0)
         ttk.Entry(self,textvariable = self.name_suffix).grid(row=1,column=1,sticky=(tk.W,tk.E)) #type: ignore
         self.temp_logging = False
         self.sdi12_logging = False
         self.spec_logging= False
         self.spec_modules_created = False
         self.spec_calibrated = False
+        self.bind('<Destroy>',self.safe_exit) 
 
         for child in self.winfo_children():
             child.grid_configure(padx=5,pady=5)
@@ -103,19 +105,19 @@ class MainApp(tk.Frame):
                 tf = self.gps.spin()
                 f = Thread(target=self.seek_gps_status,daemon=True,args=(tf,) )
                 f.start()
-                self.connect_gps_bttn.config(text='Disconnect')
+                self.connect_gps_bttn.config(text='Desconectar GPS')
                 self.gps_connected = True
             except Exception as e:
                 self.gps.stop()
                 self.gps_connected = False
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 self.status_color_label.config(background=colors(0).name)
         else:
             if self.gps is None:
                 print("No gps to connect")
             else:
                 self.gps.stop()
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 self.status_color_label.config(background='grey')
                 self.gps_connected = False
     
@@ -131,7 +133,7 @@ class MainApp(tk.Frame):
                     self.status_color_label.config( background=colors(color).name )
             else:
                 self.status_color_label.config( background=colors(6).name )
-                self.connect_gps_bttn.config(text='Connect')
+                self.connect_gps_bttn.config(text='Conectar GPS')
                 break
             sleep(1)
 
@@ -141,7 +143,12 @@ class MainApp(tk.Frame):
                 self.irr_stop_event.clear()
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'temp','.txt')
-                log_temperatures(filepath,self.irr_units,self.irr_stop_event,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                log_temperatures(filepath,self.irr_units,self.irr_stop_event,gps)
                 self.temp_logging = True
                 self.start_temp_bttn.config(text="Stop temp")
                 print("Logging temperature")
@@ -166,8 +173,13 @@ class MainApp(tk.Frame):
                 serial_port.port = self.com_port_str.get()
                 serial_port.timeout = 5
                 serial_port.open()
-                ndvi_list = make_ndvi_pairs(self.ndvi_units[0],self.ndvi_units[1:],serial_port,self.gps)
-                pri_list = make_pri_pairs(self.pri_units[0],self.pri_units[1:],serial_port,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                ndvi_list = make_ndvi_pairs(self.ndvi_units[0],self.ndvi_units[1:],serial_port,gps)
+                pri_list = make_pri_pairs(self.pri_units[0],self.pri_units[1:],serial_port,gps)
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'SDI12','.txt')
                 log_ndvi_pri(filepath,ndvi_list,pri_list,self.sdi12_stop_event)
@@ -199,7 +211,7 @@ class MainApp(tk.Frame):
                                                                     spec,
                                                                     position=device_info['position'])
                                                 for spec,device_info in zip(HDX_downlooking,self.hdx_downlooking)]
-                self.calibrate_bttn.config(bg='green')
+                # self.calibrate_bttn.config(bg='green')
                 self.spec_modules_created = True
             else:
                 pass
@@ -222,19 +234,39 @@ class MainApp(tk.Frame):
                 self.spec_stop_event.clear()
                 trial_name = self.name_suffix.get()
                 filepath = get_unique_filepath_from_string(self.wd,trial_name,'spec','.h5')
-                save_raw_spectra(filepath,self.spec_stop_event,self.hdx_modules,self.gps)
+                if self.gps_connected:
+                    gps = self.gps
+                else:
+                    print("Warning: El GPS no se ha conectado, las coordenadas son inválidas")
+                    gps = None
+                save_raw_spectra(filepath,self.spec_stop_event,self.hdx_modules,gps)
                 self.spec_logging = True
                 self.start_spec_bttn.config(text="Stop spec")
+                self.calibrate_bttn['state'] = 'disabled'
             except:
                 self.spec_stop_event.set()
                 self.spec_logging = False
                 self.start_spec_bttn.config(text="Start spec")
-                self.calibrate_bttn.config(bg='light grey')
+                self.calibrate_bttn['state'] = 'normal'
+                # self.calibrate_bttn.config(bg='light grey')
         else:
             self.spec_stop_event.set()
             self.spec_logging = False
             self.start_spec_bttn.config(text="Start spec")
+            self.calibrate_bttn['state'] = 'normal'
             # self.calibrate_bttn.config(bg='light grey')
+    
+    def safe_exit(self,event):
+        self.irr_stop_event.set()
+        self.sdi12_stop_event.set()
+        self.spec_stop_event.set()
+
+        for thread in threading.enumerate():
+            if thread != threading.current_thread():
+                thread.join(1)
+        print("Done")
+
+                
 
 if __name__ == '__main__':
     shared_lock = Lock()
@@ -244,7 +276,7 @@ if __name__ == '__main__':
     ip4 = '192.168.42.1'
     port = 9001
     rtk_rover = reach_rover(ip4,port,shared_lock)
-    rtk_rover = None
+
     ## Infrared radiometers configuration for temperature measurements
     ## Labjack U6 PRO + Apogee 1H1-series IRR
     # AIN13 thernistor unit 1142
@@ -261,9 +293,9 @@ if __name__ == '__main__':
     ## SDI-12 protocol
     ndvi_units = [
     {'id':'1','position':SensorPosition.CENTER,'orientation':SensorOrientation.UPLOOKING},
-    {'id':'2','position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING},
+    {'id':'4','position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING},
     {'id':'3','position':SensorPosition.CENTER,'orientation':SensorOrientation.DOWNLOOKING},
-    {'id':'4','position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING}
+    {'id':'2','position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING}
     ]
 
     pri_units = [
@@ -276,9 +308,9 @@ if __name__ == '__main__':
     ## HDX-XR spectrometers configuration
     ## pySeabreeze Open source USB driver
     downlooking_devices = [
-        {'position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01033'},
+        {'position':SensorPosition.RIGHT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01032'},
         {'position':SensorPosition.CENTER,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01034'},
-        {'position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01032'}
+        {'position':SensorPosition.LEFT,'orientation':SensorOrientation.DOWNLOOKING,'serial_number':'HDX01033'}
     ]
     uplooking_device = {'position':SensorPosition.CENTER,'orientation':SensorOrientation.UPLOOKING,'serial_number':'HDX01010'}
     try:
@@ -291,5 +323,3 @@ if __name__ == '__main__':
     finally:
         if not(rtk_rover is None):
             rtk_rover.stop()
-        #to do: write a mechanism to kill all threads and save files
-        print('Done')

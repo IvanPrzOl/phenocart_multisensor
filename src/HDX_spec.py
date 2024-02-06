@@ -169,17 +169,22 @@ class HDXXR_pair():
 
         optimize: if True, it will optimize the integration time for both spectrometers
         '''
-        input("Place the uplooking spectrometer under direct sunlight and press enter")
+        # input("Place the uplooking spectrometer under direct sunlight and press enter")
+        translate_position = {'center':'CENTRO','right':'DERECHA','left':'IZQUIERDA'}
+        current_pair_position = translate_position[self.downlooking_spec.position.name]
+        print(f"Comenzando rutina de calibración para el par de espectrómetros en: {current_pair_position}...")
+        print("Asegurate de ubicar la fibra óptica con DIFUSOR DE COSENO bajo la luz directa del sol y")
+        input(f"Coloca el panel de referencia bajo la fibra óptica en la posición: {current_pair_position} y presiona <ENTER> para continuar")
         self.uplooking_white_ref = self.uplooking_spec.spectra
-        input(f"Place the {self.downlooking_spec.position.name} downlooking spectrometer on the white reflectance standard and press enter")
         if optimize_downlooking:
             self.downlooking_spec.optimize()
         self.downlooking_white_ref = self.downlooking_spec.spectra
-        input("Please cover the uplooking spectrometer and press enter")
+        input("Cubre cuidadosamente la punta de la fibra óptica con DIFUSOR DE COSENO y presiona <ENTER> para continuar")
         self.uplooking_dark_ref = self.uplooking_spec.spectra
-        input(f"Please cover the {self.downlooking_spec.position.name} downlooking spectrometer and press enter")
+        input(f"Cubre cuidadosamente la punta de la fibra óptica en la posición: {self.downlooking_spec.position.name} y presiona <ENTER> para continuar")
         self.downlooking_dark_ref = self.downlooking_spec.spectra
 
+        # This section is only for live visualization of canopy reflectance purposes, to do: refactor this section
         cal_incident_irradiance = self.uplooking_white_ref - self.uplooking_dark_ref
         cal_upwelling_radiance = self.downlooking_white_ref - self.downlooking_dark_ref
 
@@ -191,7 +196,7 @@ class HDXXR_pair():
             cal_upwelling_radiance = np.interp(self.band_centers,self.downlooking_spec.wavelengths,cal_upwelling_radiance)
 
         self.correction_factors = cal_incident_irradiance/cal_upwelling_radiance
-        print("Calibration complete")
+        print(f"Calibración {current_pair_position} completa\n")
     
     #just for visualization purposes
     @property
